@@ -198,17 +198,30 @@ fi
 
 
 ## Fuzzing
+
+I tried building fuzzer with different sanitizers. `address` sanitizer produced `heap-buffer-overflow` crash, while `coverage` sanitizer gave me a input that caused a timeout/hang. 
+
+```sh
+python3 infra/helper.py build_fuzzers --sanitizer=address tmux
+```
+
 ```sh
 python3 infra/helper.py build_fuzzers --sanitizer=coverage tmux
+```
 
+```sh
 mkdir /tmp/corpus
 python3 infra/helper.py run_fuzzer --corpus-dir=/tmp/corpus tmux format-fuzzer
 ```
 
-The fuzzer quickly found an input that causes a timeout/hang. I reduced the crashing input:
+I reduced the length of crashing inputs. Since the inputs contain unprintable characters, I will represent them as python bytes in the rest part of the report.
 
 ```sh
-python3 -c 'import sys; print(repr(sys.stdin.buffer.read()))' < crash
+python3 -c 'import sys; print(repr(sys.stdin.buffer.read()))' < crash1
+b'#'
+
+
+python3 -c 'import sys; print(repr(sys.stdin.buffer.read()))' < crash2
 b'#{w:\xee#{}}\n'
 ```
 
@@ -221,7 +234,7 @@ tmux display-message "$(cat crash)"
 
 ## Investigation
 
-I investigated the cause of the hang using `GDB`. Let's follow this long and boring path our input takes and see where it finally ends up.
+I investigated the cause of the hang using `GDB`. Let's follow this long and boring path our input takes and see where it finally ends up. I will also mention where the `heap-buffer-overflow` happens.
 
 We can see that `cmd_display_message_exec` calls `format_expand_time` and passes it the template, which corresponds to the argument provided to `display-message`. Subsequently, `format_expand_time` calls `format_expand1` to handle the expansion process.
 
@@ -245,7 +258,7 @@ cmd_display_message_exec(struct cmd *self, struct cmdq_item *item)
 }
 ```
 
-At this point, inside `format_expand1` the inner part of our input - `b"w:\xee#{}"` - is passed to `format_replace` as a `fmt`.
+At this point, inside `format_expand1` the inner part of our second input - `b"w:\xee#{}"` - is passed to `format_replace` as a `fmt`. But before following that path, let's notice that if the first input - `b"#"` is passed to `format_expand1`, the variable `ch` reads outside the buffer. The investigation of the first input ends here, we can continue to follow the path of the second one.
 
 ```c
 static char *
@@ -402,4 +415,4 @@ utf8_append(struct utf8_data *ud, u_char ch)
 
 ## Summary
 
-To sum up, our key observation is that the input gets expanded, and the `w` modifier triggers the `format_width` function with the argument `b"\xee"`, which is the only remaining part of the input. As a result, tmux enters an infinite loop, repeatedly attempting to process an invalid `UTF-8` character.
+To sum up, in the first example, we saw that passing unexpected input causes read beyond the heap buffer. In the second example, the key observation is that the input gets expanded, and the `w` modifier triggers the `format_width` function with the argument `b"\xee"`, which is the only remaining part of the input. As a result, tmux enters an infinite loop, repeatedly attempting to process an invalid `UTF-8` character.
