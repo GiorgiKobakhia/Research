@@ -225,10 +225,12 @@ python3 -c 'import sys; print(repr(sys.stdin.buffer.read()))' < crash2
 b'#{w:\xee#{}}\n'
 ```
 
-This input causes tmux to hang. It can be reproduced with:
+The first crash reads beyond the heap buffer. The second input makes tmux hang. They can be reproduced with:
 
 ```sh
-tmux display-message "$(cat crash)"
+tmux display-message "$(cat crash1)"
+
+tmux display-message "$(cat crash2)"
 ```
 
 
