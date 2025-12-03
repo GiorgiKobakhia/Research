@@ -216,21 +216,20 @@ python3 infra/helper.py run_fuzzer --corpus-dir=/tmp/corpus tmux format-fuzzer
 
 I reduced the length of crashing inputs. Since the inputs contain unprintable characters, I will represent them as python bytes in the rest part of the report.
 
-```sh
-python3 -c 'import sys; print(repr(sys.stdin.buffer.read()))' < crash1
+```py
+# input 1
 b'#'
 
-
-python3 -c 'import sys; print(repr(sys.stdin.buffer.read()))' < crash2
+# input 2
 b'#{w:\xee#{}}\n'
 ```
 
 The first crash reads beyond the heap buffer. The second input makes tmux hang. They can be reproduced with:
 
 ```sh
-tmux display-message "$(cat crash1)"
+tmux display-message "#"
 
-tmux display-message "$(cat crash2)"
+tmux display-message "$(printf '\x23\x7b\x77\x3a\xee\x23\x7b\x7d\x7d')"
 ```
 
 
