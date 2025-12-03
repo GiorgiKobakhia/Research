@@ -221,7 +221,7 @@ I reduced the length of crashing inputs. Since the inputs contain unprintable ch
 b'#'
 
 # input 2
-b'#{w:\xee#{}}\n'
+b'#{w:\xee#{}}'
 ```
 
 The first crash reads beyond the heap buffer. The second input makes tmux hang. They can be reproduced with:
