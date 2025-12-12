@@ -2,6 +2,9 @@
 
 This report describes my work, which involved fuzzing tmux, finding a crash and analyzing why the input found by fuzzer caused such a result. I added a new fuzzer to existing OSS-Fuzz infrastructure. Let's go through each step I took during the process. 
 
+UPDATE: I found two bugs in tmux. These issues were fixed by tmux maintainers. 
+[commit link](https://github.com/tmux/tmux/commit/faebe7a70a43958ea69a4ddfa1812da3f97bd621)
+
 ## Setup 
 
 ### Clone oss-fuzz and tmux
